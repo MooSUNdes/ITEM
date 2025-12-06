@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>實驗室器材小記</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* 吉卜力風格配色盤 */
+            --bg-sky: #A8D8EA;
+            --bg-cloud: #E0F7FA;
+            --paper-color: #FDFBF7;
+            --forest-green: #5F7161;
+            --earth-brown: #6D4C41;
+            --accent-red: #D88585;
+            --grass-green: #9EBA8A;
+            --ink-color: #4A4A4A;
+        }
+
+        body {
+            font-family: 'Noto Serif TC', serif;
+            margin: 0;
+            padding: 40px 20px;
+            background-color: var(--bg-sky);
+            background-image: linear-gradient(180deg, var(--bg-sky) 0%, var(--bg-cloud) 100%);
+            color: var(--ink-color);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 950px;
+            margin: 0 auto;
+            background-color: var(--paper-color);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            border: 2px solid #EFEAD8;
+            position: relative;
+        }
+
+        /* 頂部裝飾標題 */
+        h1 {
+            color: var(--forest-green);
+            text-align: center;
+            font-size: 2.2em;
+            margin-bottom: 30px;
+            border-bottom: 2px dashed var(--grass-green);
+            padding-bottom: 15px;
+            letter-spacing: 2px;
+        }
+
+        /* 輸入表單區域 */
+        .input-group {
+            background-color: #F4F1EA;
+            padding: 25px;
+            border-radius: 15px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 30px;
+            align-items: center;
+            border: 1px solid #E0DVC5;
+        }
+
+        input {
+            padding: 12px 15px;
+            border: 2px solid #DCD7C9;
+            border-radius: 10px;
+            background-color: #fff;
+            font-family: 'Noto Serif TC', serif;
+            font-size: 1rem;
+            flex: 1;
+            outline: none;
+            color: var(--earth-brown);
+            transition: border-color 0.3s;
+        }
+
+        input:focus {
+            border-color: var(--forest-green);
+        }
+
+        button {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-family: 'Noto Serif TC', serif;
+            font-weight: bold;
+            font-size: 1rem;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        .btn-add {
+            background-color: var(--forest-green);
+            color: #fff;
+        }
+
+        .btn-add:hover {
+            background-color: #4A5D4B;
+        }
+
+        /* 表格樣式 */
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 10px; /* 讓行與行之間有空隙 */
+        }
+
+        thead th {
+            text-align: left;
+            padding: 15px;
+            color: var(--earth-brown);
+            font-size: 1.1em;
+            border-bottom: 2px solid var(--grass-green);
+        }
+
+        tbody tr {
+            background-color: #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            transition: transform 0.2s;
+        }
+
+        tbody tr:hover {
+            transform: translateY(-2px);
+        }
+
+        tbody td {
+            padding: 15px;
+            border-top: 1px solid #eee;
+            border-bottom: 1px solid #eee;
+        }
+
+        tbody tr td:first-child {
+            border-left: 1px solid #eee;
+            border-top-left-radius: 10px;
+            border-bottom-left-radius: 10px;
+            font-weight: bold;
+            color: var(--forest-green);
+        }
+
+        tbody tr td:last-child {
+            border-right: 1px solid #eee;
+            border-top-right-radius: 10px;
+            border-bottom-right-radius: 10px;
+        }
+
+        /* 狀態標籤 */
+        .status-badge {
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.9em;
+            display: inline-block;
+        }
+        .status-available { background-color: #E8F5E9; color: #2E7D32; }
+        .status-inuse { background-color: #FFF3E0; color: #EF6C00; }
+        
+        /* 操作按鈕 */
+        .action-btn {
+            padding: 6px 15px;
+            font-size: 0.9em;
+            margin-right: 5px;
+            color: white;
+        }
+        .btn-borrow { background-color: var(--grass-green); }
+        .btn-return { background-color: #FBC02D; color: #5d4037; }
+        .btn-del { background-color: var(--accent-red); }
+
+        .time-text {
+            font-size: 0.85em;
+            color: #888;
+            font-style: italic;
+        }
+
+        /* 裝飾性小元素 */
+        .decoration {
+            position: absolute;
+            font-size: 3rem;
+            opacity: 0.2;
+            pointer-events: none;
+        }
+        .cloud-1 { top: -20px; left: -20px; }
+        .leaf-1 { bottom: -20px; right: -20px; color: var(--forest-green); }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="decoration cloud-1">☁️</div>
+    <div class="decoration leaf-1">🌿</div>
+
+    <h1>🌿 實驗室器材使用記錄</h1>
+    
+    <form id="addForm" class="input-group">
+        <input type="text" id="eqName" placeholder="器材名稱 (例如：顯微鏡)" required>
+        <input type="number" id="eqStock" placeholder="總庫存量" min="1" required style="flex: 0 0 100px;">
+        <button type="submit" class="btn-add">＋ 入庫登記</button>
+    </form>
+
+    <table>
+        <thead>
+            <tr>
+                <th>器材名稱</th>
+                <th>庫存</th>
+                <th>目前狀態 / 借用人</th>
+                <th>最後更新時間</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody id="listBody">
+            </tbody>
+    </table>
+</div>
+
+<script>
+    // 資料結構：增加 borrower (借用人) 和 lastUpdated (最後更新時間)
+    let inventory = [
+        { 
+            id: 1, 
+            name: "高倍顯微鏡", 
+            stock: 3, 
+            status: "available", 
+            borrower: "", 
+            lastUpdated: "2023/10/24 09:00" 
+        },
+        { 
+            id: 2, 
+            name: "精密電子秤", 
+            stock: 1, 
+            status: "inuse", 
+            borrower: "宮崎先生", 
+            lastUpdated: "2023/10/25 14:30" 
+        }
+    ];
+
+    // 取得當前格式化時間 (YYYY/MM/DD HH:mm)
+    function getCurrentTime() {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hour = String(now.getHours()).padStart(2, '0');
+        const min = String(now.getMinutes()).padStart(2, '0');
+        return `${year}/${month}/${day} ${hour}:${min}`;
+    }
+
+    const listBody = document.getElementById('listBody');
+    const addForm = document.getElementById('addForm');
+
+    // 渲染畫面
+    function render() {
+        listBody.innerHTML = "";
+        
+        inventory.forEach((item) => {
+            const tr = document.createElement('tr');
+            
+            // 狀態顯示邏輯
+            let statusHtml = "";
+            let actionBtnHtml = "";
+            
+            if (item.status === 'available') {
+                statusHtml = `<span class="status-badge status-available">可借用</span>`;
+                actionBtnHtml = `<button class="action-btn btn-borrow" onclick="borrowItem(${item.id})">借用</button>`;
+            } else {
+                statusHtml = `<span class="status-badge status-inuse">借用中: ${item.borrower}</span>`;
+                actionBtnHtml = `<button class="action-btn btn-return" onclick="returnItem(${item.id})">歸還</button>`;
+            }
+
+            // 刪除按鈕
+            const deleteBtnHtml = `<button class="action-btn btn-del" onclick="deleteItem(${item.id})">刪除</button>`;
+
+            tr.innerHTML = `
+                <td>${item.name}</td>
+                <td>${item.stock}</td>
+                <td>${statusHtml}</td>
+                <td class="time-text">📅 ${item.lastUpdated}</td>
+                <td>${actionBtnHtml} ${deleteBtnHtml}</td>
+            `;
+            listBody.appendChild(tr);
+        });
+        saveData(); // 每次渲染順便存檔
+    }
+
+    // 新增器材
+    addForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const name = document.getElementById('eqName').value;
+        const stock = document.getElementById('eqStock').value;
+        
+        const newItem = {
+            id: Date.now(), // 用時間戳當ID
+            name: name,
+            stock: stock,
+            status: "available",
+            borrower: "",
+            lastUpdated: getCurrentTime() // 自動導入當下時間
+        };
+
+        inventory.push(newItem);
+        addForm.reset();
+        render();
+    });
+
+    // 借用功能 (輸入借用人)
+    window.borrowItem = function(id) {
+        const item = inventory.find(i => i.id === id);
+        if (!item) return;
+
+        // 跳出瀏覽器內建輸入框詢問借用人
+        const borrowerName = prompt(`要借用「${item.name}」，請輸入借用人姓名：`);
+        
+        if (borrowerName && borrowerName.trim() !== "") {
+            item.status = "inuse";
+            item.borrower = borrowerName;
+            item.lastUpdated = getCurrentTime(); // 更新時間
+            render();
+        }
+    };
+
+    // 歸還功能
+    window.returnItem = function(id) {
+        const item = inventory.find(i => i.id === id);
+        if (confirm(`確認「${item.borrower}」已歸還「${item.name}」嗎？`)) {
+            item.status = "available";
+            item.borrower = "";
+            item.lastUpdated = getCurrentTime(); // 更新時間
+            render();
+        }
+    };
+
+    // 刪除功能
+    window.deleteItem = function(id) {
+        if(confirm("確定要將此器材從清單移除嗎？")) {
+            inventory = inventory.filter(i => i.id !== id);
+            render();
+        }
+    };
+
+    // 本地儲存 (簡單版)
+    function saveData() {
+        localStorage.setItem('ghibli_lab_data', JSON.stringify(inventory));
+    }
+
+    function loadData() {
+        const data = localStorage.getItem('ghibli_lab_data');
+        if (data) {
+            inventory = JSON.parse(data);
+        }
+    }
+
+    // 初始化
+    loadData();
+    render();
+
+</script>
+
+</body>
+</html>
