@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>實驗室器材小記 - 庫存版</title>
+    <title>實驗室器材庫存管理 - 數量版</title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -57,6 +57,7 @@
             margin-bottom: 30px;
             border: 1px solid #E0DVC5;
             align-items: center;
+            flex-wrap: wrap; /* 讓手機版能換行 */
         }
 
         input {
@@ -68,6 +69,7 @@
             flex: 1;
             outline: none;
             color: var(--earth-brown);
+            min-width: 150px;
         }
 
         button {
@@ -83,7 +85,7 @@
         }
 
         button:active { transform: scale(0.98); }
-        button:disabled { background-color: #ccc; cursor: not-allowed; box-shadow: none; }
+        button:disabled { background-color: #ccc; cursor: not-allowed; box-shadow: none; opacity: 0.7; }
 
         .btn-add { background-color: var(--forest-green); color: #fff; }
         .btn-add:hover:not(:disabled) { background-color: #4A5D4B; }
@@ -107,7 +109,7 @@
             padding: 20px 15px;
             border-top: 1px solid #eee;
             border-bottom: 1px solid #eee;
-            vertical-align: top; /* 內容靠上對齊 */
+            vertical-align: top;
         }
 
         tbody tr td:first-child {
@@ -153,6 +155,8 @@
         }
 
         .borrower-info { display: flex; flex-direction: column; }
+        .borrower-header { font-weight: bold; color: var(--earth-brown); }
+        .borrower-count { color: var(--accent-red); font-weight: bold; margin-left: 5px; }
         .borrower-time { font-size: 0.8em; color: #888; margin-top: 2px;}
 
         /* 按鈕樣式 */
@@ -165,6 +169,7 @@
             font-size: 0.8em; 
             padding: 5px 10px;
             margin-left: 10px;
+            white-space: nowrap; /* 防止按鈕換行 */
         }
         
         .btn-del-main { 
@@ -172,6 +177,7 @@
             color: #888; 
             margin-top: 10px; 
             font-size: 0.8em;
+            width: 100%;
         }
         .btn-del-main:hover { background-color: var(--accent-red); color: white; }
 
@@ -188,7 +194,7 @@
     
     <form id="addForm" class="input-group">
         <input type="text" id="eqName" placeholder="器材名稱 (例如：燒杯)" required>
-        <input type="number" id="eqTotal" placeholder="總數量" min="1" required style="flex: 0 0 100px;">
+        <input type="number" id="eqTotal" placeholder="總數量 (個)" min="1" required style="flex: 0 0 120px;">
         <button type="submit" class="btn-add">＋ 入庫登記</button>
     </form>
 
@@ -197,7 +203,7 @@
             <tr>
                 <th width="20%">器材名稱</th>
                 <th width="15%">剩餘 / 總量</th>
-                <th width="45%">目前借出名單 (子項目)</th>
+                <th width="45%">借用紀錄 (子項目)</th>
                 <th width="20%">操作</th>
             </tr>
         </thead>
@@ -207,22 +213,16 @@
 </div>
 
 <script>
-    // 資料結構升級：每個器材包含一個 borrowers 陣列
+    // 資料結構：borrowers 增加 count (數量) 欄位
     let inventory = [
         { 
             id: 1, 
             name: "高倍顯微鏡", 
             total: 5, 
             borrowers: [
-                { name: "宮崎先生", time: "2023/12/06 14:00" },
-                { name: "鈴木製作人", time: "2023/12/06 15:30" }
+                { name: "宮崎先生", count: 1, time: "2023/12/06 14:00" },
+                { name: "鈴木製作人", count: 2, time: "2023/12/06 15:30" }
             ]
-        },
-        { 
-            id: 2, 
-            name: "三用電表", 
-            total: 3, 
-            borrowers: [] 
         }
     ];
 
@@ -240,14 +240,13 @@
         inventory.forEach((item) => {
             const tr = document.createElement('tr');
             
-            // 計算剩餘庫存
-            const borrowedCount = item.borrowers.length;
-            const available = item.total - borrowedCount;
+            // 計算目前已被借出的總數 (將所有借用人的 count 加總)
+            const borrowedTotal = item.borrowers.reduce((sum, record) => sum + record.count, 0);
+            const available = item.total - borrowedTotal;
             
-            // 庫存顏色警示
             const stockClass = available === 0 ? 'stock-low' : 'stock-normal';
             
-            // 1. 生成借用人子列表 HTML
+            // 1. 生成借用人子列表 HTML (顯示借用數量)
             let borrowersHtml = "";
             if (item.borrowers.length > 0) {
                 borrowersHtml = `<ul class="borrower-list">`;
@@ -255,7 +254,10 @@
                     borrowersHtml += `
                         <li class="borrower-item">
                             <div class="borrower-info">
-                                <strong>👤 ${b.name}</strong>
+                                <div>
+                                    <span class="borrower-header">👤 ${b.name}</span>
+                                    <span class="borrower-count">× ${b.count} 個</span>
+                                </div>
                                 <span class="borrower-time">🕒 ${b.time}</span>
                             </div>
                             <button class="btn-return" onclick="returnItem(${item.id}, ${index})">歸還</button>
@@ -267,15 +269,15 @@
                 borrowersHtml = `<span style="color:#aaa; font-style:italic;">目前在庫，無人借用</span>`;
             }
 
-            // 2. 判斷「借用按鈕」是否可用
+            // 2. 判斷按鈕狀態
             const disableBorrow = available <= 0;
-            const borrowBtnText = disableBorrow ? "庫存不足" : "借出一台";
+            const borrowBtnText = disableBorrow ? "庫存不足" : "借用器材";
 
             tr.innerHTML = `
                 <td>${item.name}</td>
                 <td>
                     <span class="stock-display ${stockClass}">${available}</span> 
-                    <span style="color:#888;">/ ${item.total}</span>
+                    <span style="color:#888;">/ ${item.total} 個</span>
                 </td>
                 <td>${borrowersHtml}</td>
                 <td>
@@ -290,7 +292,7 @@
         saveData();
     }
 
-    // 新增器材類別
+    // 新增
     addForm.addEventListener('submit', (e) => {
         e.preventDefault();
         const name = document.getElementById('eqName').value;
@@ -300,7 +302,7 @@
             id: Date.now(),
             name: name,
             total: total,
-            borrowers: [] // 初始無人借用
+            borrowers: [] 
         };
 
         inventory.push(newItem);
@@ -308,39 +310,59 @@
         render();
     });
 
-    // 借出邏輯
+    // 借出邏輯：先問數量，再問名字
     window.borrowItem = function(id) {
         const item = inventory.find(i => i.id === id);
-        // 再次檢查庫存
-        if (item.total - item.borrowers.length <= 0) {
+        
+        // 1. 計算剩餘庫存
+        const currentBorrowed = item.borrowers.reduce((sum, b) => sum + b.count, 0);
+        const available = item.total - currentBorrowed;
+
+        if (available <= 0) {
             alert("庫存不足！");
             return;
         }
 
-        const name = prompt(`借用「${item.name}」\n請輸入借用人姓名：`);
+        // 2. 詢問數量
+        let countInput = prompt(`「${item.name}」目前剩餘 ${available} 個\n請問要借出幾個？`, "1");
+        
+        if (countInput === null) return; // 按取消
+
+        let count = parseInt(countInput);
+
+        // 驗證數量合法性
+        if (isNaN(count) || count <= 0) {
+            alert("請輸入有效的數字！");
+            return;
+        }
+        if (count > available) {
+            alert(`數量不足！目前只剩下 ${available} 個。`);
+            return;
+        }
+
+        // 3. 詢問姓名
+        const name = prompt(`將借出 ${count} 個「${item.name}」\n請輸入借用人姓名：`);
         if (name && name.trim() !== "") {
-            // 加入借用名單
             item.borrowers.push({
                 name: name,
+                count: count, // 記錄數量
                 time: getCurrentTime()
             });
             render();
         }
     };
 
-    // 歸還邏輯 (針對特定借用紀錄)
+    // 歸還
     window.returnItem = function(itemId, borrowerIndex) {
         const item = inventory.find(i => i.id === itemId);
         const borrower = item.borrowers[borrowerIndex];
         
-        if (confirm(`確認「${borrower.name}」已歸還器材嗎？`)) {
-            // 從陣列中移除該筆紀錄
+        if (confirm(`確認「${borrower.name}」歸還 ${borrower.count} 個「${item.name}」嗎？`)) {
             item.borrowers.splice(borrowerIndex, 1);
             render();
         }
     };
 
-    // 刪除整個品項
     window.deleteMainItem = function(id) {
         if(confirm("確定要刪除此器材品項及其所有紀錄嗎？")) {
             inventory = inventory.filter(i => i.id !== id);
@@ -349,11 +371,11 @@
     };
 
     function saveData() {
-        localStorage.setItem('ghibli_lab_v2', JSON.stringify(inventory));
+        localStorage.setItem('ghibli_lab_v3_qty', JSON.stringify(inventory));
     }
 
     function loadData() {
-        const data = localStorage.getItem('ghibli_lab_v2');
+        const data = localStorage.getItem('ghibli_lab_v3_qty');
         if (data) {
             inventory = JSON.parse(data);
         }
