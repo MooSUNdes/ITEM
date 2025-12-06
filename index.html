@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>實驗室器材庫存管理 - 數量版</title>
+    <title>實驗室器材雲端管理系統</title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -47,7 +47,21 @@
             padding-bottom: 15px;
         }
 
-        /* 輸入區塊 */
+        /* 讀取中的遮罩 */
+        #loadingOverlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(255,255,255,0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5em;
+            color: var(--forest-green);
+            border-radius: 20px;
+            z-index: 99;
+            backdrop-filter: blur(2px);
+        }
+
         .input-group {
             background-color: #F4F1EA;
             padding: 20px;
@@ -57,7 +71,7 @@
             margin-bottom: 30px;
             border: 1px solid #E0DVC5;
             align-items: center;
-            flex-wrap: wrap; /* 讓手機版能換行 */
+            flex-wrap: wrap;
         }
 
         input {
@@ -83,14 +97,13 @@
             transition: all 0.2s;
             box-shadow: 0 3px 5px rgba(0,0,0,0.1);
         }
-
+        
         button:active { transform: scale(0.98); }
         button:disabled { background-color: #ccc; cursor: not-allowed; box-shadow: none; opacity: 0.7; }
 
         .btn-add { background-color: var(--forest-green); color: #fff; }
         .btn-add:hover:not(:disabled) { background-color: #4A5D4B; }
 
-        /* 表格樣式 */
         table { width: 100%; border-collapse: separate; border-spacing: 0 15px; }
         
         thead th {
@@ -100,10 +113,7 @@
             border-bottom: 2px solid var(--grass-green);
         }
 
-        tbody tr {
-            background-color: #fff;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        }
+        tbody tr { background-color: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
 
         tbody td {
             padding: 20px 15px;
@@ -127,20 +137,11 @@
             border-bottom-right-radius: 10px;
         }
 
-        /* 庫存數字樣式 */
-        .stock-display {
-            font-size: 1.2em;
-            font-weight: bold;
-        }
+        .stock-display { font-size: 1.2em; font-weight: bold; }
         .stock-low { color: var(--accent-red); }
         .stock-normal { color: var(--forest-green); }
 
-        /* 借用人子列表樣式 */
-        .borrower-list {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
+        .borrower-list { list-style: none; padding: 0; margin: 0; }
 
         .borrower-item {
             background-color: var(--tag-bg);
@@ -159,7 +160,6 @@
         .borrower-count { color: var(--accent-red); font-weight: bold; margin-left: 5px; }
         .borrower-time { font-size: 0.8em; color: #888; margin-top: 2px;}
 
-        /* 按鈕樣式 */
         .btn-borrow { background-color: var(--grass-green); color: white; width: 100%; }
         .btn-borrow:hover:not(:disabled) { background-color: #8CA57A; }
         
@@ -169,7 +169,7 @@
             font-size: 0.8em; 
             padding: 5px 10px;
             margin-left: 10px;
-            white-space: nowrap; /* 防止按鈕換行 */
+            white-space: nowrap;
         }
         
         .btn-del-main { 
@@ -190,8 +190,12 @@
 <div class="container">
     <div class="decoration cloud-1">☁️</div>
 
-    <h1>🌿 實驗室器材庫存管理</h1>
+    <h1>🌿 實驗室器材雲端管理</h1>
     
+    <div id="loadingOverlay">
+        <span>資料同步中... 🌱</span>
+    </div>
+
     <form id="addForm" class="input-group">
         <input type="text" id="eqName" placeholder="器材名稱 (例如：燒杯)" required>
         <input type="number" id="eqTotal" placeholder="總數量 (個)" min="1" required style="flex: 0 0 120px;">
@@ -207,46 +211,77 @@
                 <th width="20%">操作</th>
             </tr>
         </thead>
-        <tbody id="listBody">
-            </tbody>
+        <tbody id="listBody"></tbody>
     </table>
 </div>
 
 <script>
-    // 資料結構：borrowers 增加 count (數量) 欄位
-    let inventory = [
-        { 
-            id: 1, 
-            name: "高倍顯微鏡", 
-            total: 5, 
-            borrowers: [
-                { name: "宮崎先生", count: 1, time: "2023/12/06 14:00" },
-                { name: "鈴木製作人", count: 2, time: "2023/12/06 15:30" }
-            ]
-        }
-    ];
+    // 🔴 請把下方這串網址換成您部署後的 Web App URL
+    const API_URL = "https://script.google.com/macros/s/AKfycbwxM76KUmVRVpfgor54AL14qhB8zqZZCQA78pbyNW9bCyPPwr-vfl5_ZlQy4zSfgLuVgg/exec/exec";
+
+    let inventory = [];
+    const listBody = document.getElementById('listBody');
+    const loadingOverlay = document.getElementById('loadingOverlay');
 
     function getCurrentTime() {
         const now = new Date();
         return `${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
     }
 
-    const listBody = document.getElementById('listBody');
-    const addForm = document.getElementById('addForm');
+    function showLoading(show) {
+        loadingOverlay.style.display = show ? 'flex' : 'none';
+    }
+
+    // 1. 讀取資料 (GET)
+    function fetchInventory() {
+        showLoading(true);
+        fetch(API_URL)
+            .then(res => res.json())
+            .then(data => {
+                inventory = data;
+                render();
+                showLoading(false);
+            })
+            .catch(err => {
+                console.error(err);
+                alert("無法連線到資料庫，請檢查網路或 URL");
+                showLoading(false);
+            });
+    }
+
+    // 2. 傳送資料 (POST)
+    function syncData(action, payload) {
+        showLoading(true);
+        // 使用 text/plain 避免 CORS 預檢請求 (Google Apps Script 特性)
+        fetch(API_URL, {
+            method: 'POST',
+            body: JSON.stringify({ action: action, ...payload }),
+            headers: { "Content-Type": "text/plain;charset=utf-8" }
+        })
+        .then(res => res.json())
+        .then(response => {
+            if(response.status === 'success') {
+                fetchInventory(); // 成功後重新抓取最新資料
+            } else {
+                alert("同步失敗：" + response.message);
+                showLoading(false);
+            }
+        })
+        .catch(err => {
+            alert("同步發生錯誤");
+            showLoading(false);
+        });
+    }
 
     function render() {
         listBody.innerHTML = "";
-        
         inventory.forEach((item) => {
             const tr = document.createElement('tr');
             
-            // 計算目前已被借出的總數 (將所有借用人的 count 加總)
             const borrowedTotal = item.borrowers.reduce((sum, record) => sum + record.count, 0);
             const available = item.total - borrowedTotal;
-            
             const stockClass = available === 0 ? 'stock-low' : 'stock-normal';
             
-            // 1. 生成借用人子列表 HTML (顯示借用數量)
             let borrowersHtml = "";
             if (item.borrowers.length > 0) {
                 borrowersHtml = `<ul class="borrower-list">`;
@@ -261,15 +296,13 @@
                                 <span class="borrower-time">🕒 ${b.time}</span>
                             </div>
                             <button class="btn-return" onclick="returnItem(${item.id}, ${index})">歸還</button>
-                        </li>
-                    `;
+                        </li>`;
                 });
                 borrowersHtml += `</ul>`;
             } else {
                 borrowersHtml = `<span style="color:#aaa; font-style:italic;">目前在庫，無人借用</span>`;
             }
 
-            // 2. 判斷按鈕狀態
             const disableBorrow = available <= 0;
             const borrowBtnText = disableBorrow ? "庫存不足" : "借用器材";
 
@@ -281,110 +314,70 @@
                 </td>
                 <td>${borrowersHtml}</td>
                 <td>
-                    <button class="btn-borrow" onclick="borrowItem(${item.id})" ${disableBorrow ? 'disabled' : ''}>
-                        ${borrowBtnText}
-                    </button>
+                    <button class="btn-borrow" onclick="borrowItem(${item.id})" ${disableBorrow ? 'disabled' : ''}>${borrowBtnText}</button>
                     <button class="btn-del-main" onclick="deleteMainItem(${item.id})">刪除品項</button>
                 </td>
             `;
             listBody.appendChild(tr);
         });
-        saveData();
     }
 
+    // --- 操作邏輯 ---
+
     // 新增
-    addForm.addEventListener('submit', (e) => {
+    document.getElementById('addForm').addEventListener('submit', (e) => {
         e.preventDefault();
-        const name = document.getElementById('eqName').value;
-        const total = parseInt(document.getElementById('eqTotal').value);
-        
         const newItem = {
             id: Date.now(),
-            name: name,
-            total: total,
-            borrowers: [] 
+            name: document.getElementById('eqName').value,
+            total: parseInt(document.getElementById('eqTotal').value)
         };
-
-        inventory.push(newItem);
-        addForm.reset();
-        render();
+        // 送出新增請求
+        syncData('add', newItem);
+        document.getElementById('addForm').reset();
     });
 
-    // 借出邏輯：先問數量，再問名字
+    // 借用
     window.borrowItem = function(id) {
         const item = inventory.find(i => i.id === id);
-        
-        // 1. 計算剩餘庫存
         const currentBorrowed = item.borrowers.reduce((sum, b) => sum + b.count, 0);
         const available = item.total - currentBorrowed;
 
-        if (available <= 0) {
-            alert("庫存不足！");
-            return;
-        }
+        if (available <= 0) { alert("庫存不足！"); return; }
 
-        // 2. 詢問數量
-        let countInput = prompt(`「${item.name}」目前剩餘 ${available} 個\n請問要借出幾個？`, "1");
-        
-        if (countInput === null) return; // 按取消
-
+        let countInput = prompt(`「${item.name}」剩餘 ${available} 個，借出幾個？`, "1");
+        if (countInput === null) return;
         let count = parseInt(countInput);
+        if (isNaN(count) || count <= 0 || count > available) { alert("數量無效"); return; }
 
-        // 驗證數量合法性
-        if (isNaN(count) || count <= 0) {
-            alert("請輸入有效的數字！");
-            return;
-        }
-        if (count > available) {
-            alert(`數量不足！目前只剩下 ${available} 個。`);
-            return;
-        }
-
-        // 3. 詢問姓名
-        const name = prompt(`將借出 ${count} 個「${item.name}」\n請輸入借用人姓名：`);
+        const name = prompt(`借出 ${count} 個給誰？`);
         if (name && name.trim() !== "") {
-            item.borrowers.push({
-                name: name,
-                count: count, // 記錄數量
-                time: getCurrentTime()
-            });
-            render();
+            // 更新本地資料結構，準備上傳
+            item.borrowers.push({ name: name, count: count, time: getCurrentTime() });
+            syncData('update', { id: item.id, borrowers: item.borrowers });
         }
     };
 
     // 歸還
-    window.returnItem = function(itemId, borrowerIndex) {
+    window.returnItem = function(itemId, index) {
         const item = inventory.find(i => i.id === itemId);
-        const borrower = item.borrowers[borrowerIndex];
-        
-        if (confirm(`確認「${borrower.name}」歸還 ${borrower.count} 個「${item.name}」嗎？`)) {
-            item.borrowers.splice(borrowerIndex, 1);
-            render();
+        const b = item.borrowers[index];
+        if (confirm(`確認「${b.name}」歸還器材嗎？`)) {
+            item.borrowers.splice(index, 1);
+            syncData('update', { id: item.id, borrowers: item.borrowers });
         }
     };
 
+    // 刪除
     window.deleteMainItem = function(id) {
-        if(confirm("確定要刪除此器材品項及其所有紀錄嗎？")) {
-            inventory = inventory.filter(i => i.id !== id);
-            render();
+        if(confirm("確定要刪除此器材品項嗎？(無法復原)")) {
+            syncData('delete', { id: id });
         }
     };
 
-    function saveData() {
-        localStorage.setItem('ghibli_lab_v3_qty', JSON.stringify(inventory));
-    }
-
-    function loadData() {
-        const data = localStorage.getItem('ghibli_lab_v3_qty');
-        if (data) {
-            inventory = JSON.parse(data);
-        }
-    }
-
-    loadData();
-    render();
+    // 初始化讀取
+    fetchInventory();
 
 </script>
-
 </body>
 </html>
