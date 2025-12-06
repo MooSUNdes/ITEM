@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>實驗室器材小記 - 庫存版</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-sky: #A8D8EA;
+            --bg-cloud: #E0F7FA;
+            --paper-color: #FDFBF7;
+            --forest-green: #5F7161;
+            --earth-brown: #6D4C41;
+            --accent-red: #D88585;
+            --grass-green: #9EBA8A;
+            --ink-color: #4A4A4A;
+            --tag-bg: #EFEAD8;
+        }
+
+        body {
+            font-family: 'Noto Serif TC', serif;
+            margin: 0;
+            padding: 40px 20px;
+            background-image: linear-gradient(180deg, var(--bg-sky) 0%, var(--bg-cloud) 100%);
+            color: var(--ink-color);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background-color: var(--paper-color);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            border: 2px solid #EFEAD8;
+            position: relative;
+        }
+
+        h1 {
+            color: var(--forest-green);
+            text-align: center;
+            font-size: 2.2em;
+            margin-bottom: 30px;
+            border-bottom: 2px dashed var(--grass-green);
+            padding-bottom: 15px;
+        }
+
+        /* 輸入區塊 */
+        .input-group {
+            background-color: #F4F1EA;
+            padding: 20px;
+            border-radius: 15px;
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            border: 1px solid #E0DVC5;
+            align-items: center;
+        }
+
+        input {
+            padding: 10px 15px;
+            border: 2px solid #DCD7C9;
+            border-radius: 10px;
+            font-family: 'Noto Serif TC', serif;
+            font-size: 1rem;
+            flex: 1;
+            outline: none;
+            color: var(--earth-brown);
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-family: 'Noto Serif TC', serif;
+            font-weight: bold;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+            box-shadow: 0 3px 5px rgba(0,0,0,0.1);
+        }
+
+        button:active { transform: scale(0.98); }
+        button:disabled { background-color: #ccc; cursor: not-allowed; box-shadow: none; }
+
+        .btn-add { background-color: var(--forest-green); color: #fff; }
+        .btn-add:hover:not(:disabled) { background-color: #4A5D4B; }
+
+        /* 表格樣式 */
+        table { width: 100%; border-collapse: separate; border-spacing: 0 15px; }
+        
+        thead th {
+            text-align: left;
+            padding: 10px 15px;
+            color: var(--earth-brown);
+            border-bottom: 2px solid var(--grass-green);
+        }
+
+        tbody tr {
+            background-color: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        tbody td {
+            padding: 20px 15px;
+            border-top: 1px solid #eee;
+            border-bottom: 1px solid #eee;
+            vertical-align: top; /* 內容靠上對齊 */
+        }
+
+        tbody tr td:first-child {
+            border-left: 1px solid #eee;
+            border-top-left-radius: 10px;
+            border-bottom-left-radius: 10px;
+            font-weight: bold;
+            color: var(--forest-green);
+            font-size: 1.1em;
+        }
+
+        tbody tr td:last-child {
+            border-right: 1px solid #eee;
+            border-top-right-radius: 10px;
+            border-bottom-right-radius: 10px;
+        }
+
+        /* 庫存數字樣式 */
+        .stock-display {
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+        .stock-low { color: var(--accent-red); }
+        .stock-normal { color: var(--forest-green); }
+
+        /* 借用人子列表樣式 */
+        .borrower-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .borrower-item {
+            background-color: var(--tag-bg);
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9em;
+            border-left: 4px solid var(--earth-brown);
+        }
+
+        .borrower-info { display: flex; flex-direction: column; }
+        .borrower-time { font-size: 0.8em; color: #888; margin-top: 2px;}
+
+        /* 按鈕樣式 */
+        .btn-borrow { background-color: var(--grass-green); color: white; width: 100%; }
+        .btn-borrow:hover:not(:disabled) { background-color: #8CA57A; }
+        
+        .btn-return { 
+            background-color: #FBC02D; 
+            color: #5d4037; 
+            font-size: 0.8em; 
+            padding: 5px 10px;
+            margin-left: 10px;
+        }
+        
+        .btn-del-main { 
+            background-color: #eee; 
+            color: #888; 
+            margin-top: 10px; 
+            font-size: 0.8em;
+        }
+        .btn-del-main:hover { background-color: var(--accent-red); color: white; }
+
+        .decoration { position: absolute; font-size: 3rem; opacity: 0.2; pointer-events: none; }
+        .cloud-1 { top: -20px; left: -20px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="decoration cloud-1">☁️</div>
+
+    <h1>🌿 實驗室器材庫存管理</h1>
+    
+    <form id="addForm" class="input-group">
+        <input type="text" id="eqName" placeholder="器材名稱 (例如：燒杯)" required>
+        <input type="number" id="eqTotal" placeholder="總數量" min="1" required style="flex: 0 0 100px;">
+        <button type="submit" class="btn-add">＋ 入庫登記</button>
+    </form>
+
+    <table>
+        <thead>
+            <tr>
+                <th width="20%">器材名稱</th>
+                <th width="15%">剩餘 / 總量</th>
+                <th width="45%">目前借出名單 (子項目)</th>
+                <th width="20%">操作</th>
+            </tr>
+        </thead>
+        <tbody id="listBody">
+            </tbody>
+    </table>
+</div>
+
+<script>
+    // 資料結構升級：每個器材包含一個 borrowers 陣列
+    let inventory = [
+        { 
+            id: 1, 
+            name: "高倍顯微鏡", 
+            total: 5, 
+            borrowers: [
+                { name: "宮崎先生", time: "2023/12/06 14:00" },
+                { name: "鈴木製作人", time: "2023/12/06 15:30" }
+            ]
+        },
+        { 
+            id: 2, 
+            name: "三用電表", 
+            total: 3, 
+            borrowers: [] 
+        }
+    ];
+
+    function getCurrentTime() {
+        const now = new Date();
+        return `${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    }
+
+    const listBody = document.getElementById('listBody');
+    const addForm = document.getElementById('addForm');
+
+    function render() {
+        listBody.innerHTML = "";
+        
+        inventory.forEach((item) => {
+            const tr = document.createElement('tr');
+            
+            // 計算剩餘庫存
+            const borrowedCount = item.borrowers.length;
+            const available = item.total - borrowedCount;
+            
+            // 庫存顏色警示
+            const stockClass = available === 0 ? 'stock-low' : 'stock-normal';
+            
+            // 1. 生成借用人子列表 HTML
+            let borrowersHtml = "";
+            if (item.borrowers.length > 0) {
+                borrowersHtml = `<ul class="borrower-list">`;
+                item.borrowers.forEach((b, index) => {
+                    borrowersHtml += `
+                        <li class="borrower-item">
+                            <div class="borrower-info">
+                                <strong>👤 ${b.name}</strong>
+                                <span class="borrower-time">🕒 ${b.time}</span>
+                            </div>
+                            <button class="btn-return" onclick="returnItem(${item.id}, ${index})">歸還</button>
+                        </li>
+                    `;
+                });
+                borrowersHtml += `</ul>`;
+            } else {
+                borrowersHtml = `<span style="color:#aaa; font-style:italic;">目前在庫，無人借用</span>`;
+            }
+
+            // 2. 判斷「借用按鈕」是否可用
+            const disableBorrow = available <= 0;
+            const borrowBtnText = disableBorrow ? "庫存不足" : "借出一台";
+
+            tr.innerHTML = `
+                <td>${item.name}</td>
+                <td>
+                    <span class="stock-display ${stockClass}">${available}</span> 
+                    <span style="color:#888;">/ ${item.total}</span>
+                </td>
+                <td>${borrowersHtml}</td>
+                <td>
+                    <button class="btn-borrow" onclick="borrowItem(${item.id})" ${disableBorrow ? 'disabled' : ''}>
+                        ${borrowBtnText}
+                    </button>
+                    <button class="btn-del-main" onclick="deleteMainItem(${item.id})">刪除品項</button>
+                </td>
+            `;
+            listBody.appendChild(tr);
+        });
+        saveData();
+    }
+
+    // 新增器材類別
+    addForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const name = document.getElementById('eqName').value;
+        const total = parseInt(document.getElementById('eqTotal').value);
+        
+        const newItem = {
+            id: Date.now(),
+            name: name,
+            total: total,
+            borrowers: [] // 初始無人借用
+        };
+
+        inventory.push(newItem);
+        addForm.reset();
+        render();
+    });
+
+    // 借出邏輯
+    window.borrowItem = function(id) {
+        const item = inventory.find(i => i.id === id);
+        // 再次檢查庫存
+        if (item.total - item.borrowers.length <= 0) {
+            alert("庫存不足！");
+            return;
+        }
+
+        const name = prompt(`借用「${item.name}」\n請輸入借用人姓名：`);
+        if (name && name.trim() !== "") {
+            // 加入借用名單
+            item.borrowers.push({
+                name: name,
+                time: getCurrentTime()
+            });
+            render();
+        }
+    };
+
+    // 歸還邏輯 (針對特定借用紀錄)
+    window.returnItem = function(itemId, borrowerIndex) {
+        const item = inventory.find(i => i.id === itemId);
+        const borrower = item.borrowers[borrowerIndex];
+        
+        if (confirm(`確認「${borrower.name}」已歸還器材嗎？`)) {
+            // 從陣列中移除該筆紀錄
+            item.borrowers.splice(borrowerIndex, 1);
+            render();
+        }
+    };
+
+    // 刪除整個品項
+    window.deleteMainItem = function(id) {
+        if(confirm("確定要刪除此器材品項及其所有紀錄嗎？")) {
+            inventory = inventory.filter(i => i.id !== id);
+            render();
+        }
+    };
+
+    function saveData() {
+        localStorage.setItem('ghibli_lab_v2', JSON.stringify(inventory));
+    }
+
+    function loadData() {
+        const data = localStorage.getItem('ghibli_lab_v2');
+        if (data) {
+            inventory = JSON.parse(data);
+        }
+    }
+
+    loadData();
+    render();
+
+</script>
+
+</body>
+</html>
