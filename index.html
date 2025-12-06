@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>實驗室器材管理系統</title>
+    <style>
+        /* CSS 樣式 */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 20px;
+            background-color: #f4f7f6;
+            color: #333;
+        }
+        .container {
+            max-width: 1000px;
+            margin: auto;
+            background: #fff;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #007bff;
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        .form-section, .list-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+        }
+        label {
+            display: block;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        input[type="text"], input[type="number"] {
+            width: calc(100% - 22px);
+            padding: 10px;
+            margin-top: 5px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            margin-right: 5px;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        .delete-btn {
+            background-color: #dc3545;
+        }
+        .delete-btn:hover {
+            background-color: #c82333;
+        }
+        .edit-btn {
+            background-color: #ffc107;
+            color: #333;
+        }
+        .edit-btn:hover {
+            background-color: #e0a800;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #007bff;
+            color: white;
+            font-weight: bold;
+        }
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        .status-ready { color: green; font-weight: bold; }
+        .status-low { color: orange; font-weight: bold; }
+        .status-none { color: red; font-weight: bold; }
+        .actions-cell {
+            white-space: nowrap; /* 防止按鈕換行 */
+        }
+        .actions-cell button {
+            margin: 2px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>實驗室器材庫存與借出管理</h1>
+
+    <div class="form-section">
+        <h2>新增器材</h2>
+        <label for="itemName">器材名稱:</label>
+        <input type="text" id="itemName" placeholder="例如：100ml 燒杯" required>
+        
+        <label for="itemTotal">總庫存量:</label>
+        <input type="number" id="itemTotal" value="1" min="1" required>
+        
+        <label for="itemBorrowed">已借出量:</label>
+        <input type="number" id="itemBorrowed" value="0" min="0" required>
+
+        <button onclick="addItem()">新增器材</button>
+    </div>
+    
+    <div class="list-section">
+        <h2>器材清單</h2>
+        <table id="inventoryTable">
+            <thead>
+                <tr>
+                    <th>名稱</th>
+                    <th>總庫存量</th>
+                    <th>可借用量 (剩餘)</th>
+                    <th>已借出量</th>
+                    <th>狀態</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                </tbody>
+        </table>
+    </div>
+
+</div>
+
+<script>
+    // JavaScript 程式碼
+    
+    // 儲存器材資料的陣列
+    let inventory = JSON.parse(localStorage.getItem('labInventory')) || [];
+
+    // 渲染器材清單到表格
+    function renderInventory() {
+        const tableBody = document.querySelector('#inventoryTable tbody');
+        tableBody.innerHTML = ''; // 清空現有內容
+
+        inventory.forEach((item, index) => {
+            const available = item.total - item.borrowed;
+            let statusText = '';
+            let statusClass = '';
+
+            if (available <= 0) {
+                statusText = '已借出完畢';
+                statusClass = 'status-none';
+            } else if (available <= item.total * 0.1 && item.total > 10) { // 如果剩餘低於10% (且總量大於10) 則顯示低庫存
+                statusText = '低庫存！';
+                statusClass = 'status-low';
+            } else {
+                statusText = '可借用';
+                statusClass = 'status-ready';
+            }
+
+            const row = tableBody.insertRow();
+            row.innerHTML = `
+                <td>${item.name}</td>
+                <td><input type="number" id="total-${index}" value="${item.total}" min="1" style="width: 80px;"></td>
+                <td>${available}</td>
+                <td><input type="number" id="borrowed-${index}" value="${item.borrowed}" min="0" style="width: 80px;"></td>
+                <td class="${statusClass}">${statusText}</td>
+                <td class="actions-cell">
+                    <button class="edit-btn" onclick="updateItem(${index})">更新數量</button>
+                    <button class="delete-btn" onclick="deleteItem(${index})">刪除</button>
+                </td>
+            `;
+        });
+        saveInventory();
+    }
+
+    // 將資料儲存到瀏覽器的 Local Storage
+    function saveInventory() {
+        localStorage.setItem('labInventory', JSON.stringify(inventory));
+    }
+
+    // 新增器材
+    function addItem() {
+        const nameInput = document.getElementById('itemName');
+        const totalInput = document.getElementById('itemTotal');
+        const borrowedInput = document.getElementById('itemBorrowed');
+
+        const name = nameInput.value.trim();
+        const total = parseInt(totalInput.value);
+        const borrowed = parseInt(borrowedInput.value);
+
+        if (!name || total <= 0 || borrowed < 0 || borrowed > total) {
+            alert('請檢查輸入：名稱不能為空，總庫存必須大於0，已借出量不能小於0或大於總庫存。');
+            return;
+        }
+
+        const newItem = {
+            name: name,
+            total: total,
+            borrowed: borrowed
+        };
+
+        // 檢查是否已存在同名器材
+        const existingIndex = inventory.findIndex(item => item.name === name);
+        if (existingIndex !== -1) {
+            // 如果存在，更新數量
+            inventory[existingIndex].total += total;
+            inventory[existingIndex].borrowed += borrowed;
+        } else {
+            // 否則，新增
+            inventory.push(newItem);
+        }
+
+        // 清空表單
+        nameInput.value = '';
+        totalInput.value = '1';
+        borrowedInput.value = '0';
+
+        renderInventory();
+    }
+
+    // 更新器材的數量
+    function updateItem(index) {
+        const newTotal = parseInt(document.getElementById(`total-${index}`).value);
+        const newBorrowed = parseInt(document.getElementById(`borrowed-${index}`).value);
+
+        if (newTotal <= 0) {
+            alert('總庫存量必須大於0。');
+            document.getElementById(`total-${index}`).value = inventory[index].total;
+            return;
+        }
+        if (newBorrowed < 0 || newBorrowed > newTotal) {
+            alert('已借出量必須在 0 到 總庫存量 之間。');
+            document.getElementById(`borrowed-${index}`).value = inventory[index].borrowed;
+            return;
+        }
+
+        inventory[index].total = newTotal;
+        inventory[index].borrowed = newBorrowed;
+        
+        renderInventory(); // 重新渲染以更新可借用量和狀態
+        alert(`器材 ${inventory[index].name} 的數量已更新。`);
+    }
+
+    // 刪除器材
+    function deleteItem(index) {
+        if (confirm(`確定要刪除器材：${inventory[index].name} 嗎？`)) {
+            inventory.splice(index, 1);
+            renderInventory();
+        }
+    }
+
+    // 頁面載入時初始化清單
+    document.addEventListener('DOMContentLoaded', renderInventory);
+
+</script>
+
+</body>
+</html>
